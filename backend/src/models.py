@@ -88,8 +88,10 @@ class Net(Base):
     mesh_mm:Mapped[float]=mapped_column(Float)
 class NetCalibration(Base):
     __tablename__='net_calibrations'
+    __table_args__=(UniqueConstraint('net_id','version'),)
     id:Mapped[int]=mapped_column(primary_key=True)
     net_id:Mapped[int]=mapped_column(ForeignKey('nets.id'))
+    version:Mapped[int]=mapped_column(Integer,default=1)
     measured_mm:Mapped[float]=mapped_column(Float)
     valid_until:Mapped[date]=mapped_column(Date)
     certificate:Mapped[str]=mapped_column(String(100))
@@ -104,6 +106,8 @@ class BioSample(Base):
     species:Mapped[str]=mapped_column(String(60))
     count:Mapped[int]=mapped_column(Integer)
     mean_length_mm:Mapped[float]=mapped_column(Float)
+    # valid=可交付；pending=复校后原关联失效待复核；superseded=已由同群落的新关联替代
+    status:Mapped[str]=mapped_column(String(20),default='valid')
 class MissingInterval(Base):
     __tablename__='missing_intervals'
     __table_args__=(CheckConstraint('end_m > start_m AND start_m >= 0'),)

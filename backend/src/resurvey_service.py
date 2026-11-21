@@ -2,6 +2,7 @@ from sqlalchemy import select
 from .models import MissingInterval,Resurvey,Transect,Echo,BioSample
 from .common import get,reject,finish,transect_lock
 from .school_service import latest
+from .biology_service import layer_ready
 from .transect_service import length
 
 def gap(db,data,user):
@@ -21,7 +22,9 @@ def complete(db,id,data,user):
     initial=get(db,Resurvey,id);c,t=transect_lock(db,initial.continuation_id,True);res=get(db,Resurvey,id,True);g=get(db,MissingInterval,res.gap_id,True)
     reject(res.status!='planned','补航已接续或撤销')
     a=latest(db,t.id,True);reject(not a,'补航回波群落尚未复核')
-    reject(not db.scalar(select(BioSample).where(BioSample.transect_id==t.id,BioSample.analysis_id==a.id)),'补航缺少对应群落的网具抽样')
+    samples=list(db.scalars(select(BioSample).where(BioSample.transect_id==t.id,BioSample.analysis_id==a.id)))
+    reject(not samples,'补航缺少对应群落的网具抽样')
+    ready,reason=layer_ready(db,t.id,a.id);reject(not ready,'补航'+reason)
     reject(db.scalar(select(MissingInterval).where(MissingInterval.transect_id==t.id,MissingInterval.status=='open')) is not None,'补航自身仍存在缺测')
     res.status='completed';res.evidence=data.evidence;g.status='covered';return finish(db,user,'确认缺测补航接续',res)
 def cancel(db,id,user):
